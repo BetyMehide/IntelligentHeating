@@ -3,5 +3,5 @@ This repository holds code for the smart heating project we created during winte
 
 ## Dependencies 
 - Temperature and humidity sensor: DHT library, found here: https://github.com/RobTillaart/Arduino/tree/master/libraries/DHTlib
-- Included <Keypad> library from Arduino [Sketch -> Include Libraries -> Manage Libraries -> Keypad] & install
+- Included 'Keypad' library from Arduino [Sketch -> Include Libraries -> Manage Libraries -> Keypad] & install
   Note : Author - Mark Stanley & Alexander Brevig
