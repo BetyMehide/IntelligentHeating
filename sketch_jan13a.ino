@@ -1,43 +1,65 @@
-#include <dht.h>
+#include <Adafruit_Sensor.h>
+#include "DHT.h"
 #include <LiquidCrystal.h>
-#include <Keypad.h>
-dht DHT;
+//#include <ESP8266WiFi.h>
+
 
 //Define variables
 int pirValue; // Place to store read PIR Value
-unsigned long curMillis;
-long tempDelay = 10000;
+//variables for controlling information sensing time
+unsigned long curMillis; 
+long tempDelay = 10000; //delay for displaying temp and humidity data in milliseconds
 long prevTempMillis = 0;
-long motionDelay = 2000;
+long motionDelay = 2000; //delay for displaying motion sensor data
 long prevMotionMillis = 0;
-long prevScreenMillis = 0;
-const byte ROWS = 4; 
-const byte COLS = 4;
-char keys[ROWS][COLS] = {
-  {'1','2','3','A'},
-  {'4','5','6','B'},
-  {'7','8','9','C'},
-  {'*','0','#','D'}
-};
+int prevTouchValueUp = LOW;
+int prevTouchValueDown = LOW;
+
+//variables for wifi connection
+//const char *ssid =  "Your wifi Network name";     // replace with your wifi ssid and wpa2 key
+//const char *pass =  "Network password";
+//WiFiClient client;
 
 //Define the pins in use
-#define DHT11_PIN A0 // pin for the temp and humidity sensor
-int pirPin = A1; // Input for HC-S501 (motion sensor)
-byte rowPins[ROWS] = {7, 6, 5, 4}; //row pinouts of the keypad
-byte colPins[COLS] = {8, 9, 10, 11}; //column pinouts of the keypad
-LiquidCrystal lcd(13, 12, 3, 2, 1, 0); //screen pins
+#define DHTPIN 15 // pin for the temp and humidity sensor
+#define DHTTYPE DHT22 //the humidity sensor type
+int pirPin = 16; // Input for HC-S501 (motion sensor)
+#define ctsPinUp 4 //touch sensor for up
+#define ctsPinDown 0 //touch sensor for down
 
-Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS);
+//Initializations
+DHT dht(DHTPIN, DHTTYPE); // Initialize DHT sensor
 
 void setup(){
-  //setup for temp and humidity sensor
   Serial.begin(9600);
+
+  //setup for the wifi port
+  while (!Serial){
+    ;//wait for serial port to connect
+  }
+
+  //setup for temp and humidity sensor
+  delay(10);
+  dht.begin();
+
+  //setup for the touch sensor
+  pinMode(ctsPinUp, INPUT);
+  pinMode(ctsPinDown, INPUT);
 
   //setup for motion sensor
   pinMode(pirPin, INPUT);
 
-  //setup screen
-  lcd.begin(16,2); //16 by 2 character display
+  //setup for wifi
+  //Serial.println("Connecting to ");
+  //Serial.println(ssid); 
+  //WiFi.begin(ssid); 
+  //while (WiFi.status() != WL_CONNECTED)
+  //{
+  //  delay(500);
+  //  Serial.print(".");
+  //}
+  //Serial.println("");
+  //Serial.println("WiFi connected"); 
 }
 
 void loop()
@@ -47,42 +69,47 @@ void loop()
   //temperature and humidity sensor handling
   if(curMillis - prevTempMillis >= tempDelay){
     prevTempMillis = curMillis;
-    int chk = DHT.read11(DHT11_PIN);
-    Serial.print("Temperature = ");
-    Serial.println(DHT.temperature);
+    Serial.print("Temperature in F = ");
+    Serial.println(dht.readTemperature(true));
+    Serial.print("Temperature in C =");
+    Serial.println(dht.readTemperature());
     Serial.print("Humidity = ");
-    Serial.println(DHT.humidity);
+    Serial.println(dht.readHumidity());
   }
+  
+    // touch sensor handling
+    int touchValueUp = digitalRead(ctsPinUp);
+    if(touchValueUp == HIGH){
+      if(prevTouchValueUp != HIGH){
+        Serial.println("Up");  
+      }
+      prevTouchValueUp = touchValueUp;
+    }
+    else{
+      prevTouchValueUp = LOW;
+    }
+    int touchValueDown = digitalRead(ctsPinDown);
+    if(touchValueDown == HIGH){
+      if(prevTouchValueDown != HIGH){
+        Serial.println("Down");  
+      }
+      prevTouchValueDown = touchValueDown;
+    }
+    else{
+      prevTouchValueDown = LOW;
+    }
+      
 
   //motion sensor handling
   pirValue = digitalRead(pirPin);
-  if (pirValue){
+ // if (pirValue){
     if(curMillis - prevMotionMillis >= motionDelay){
       prevMotionMillis = curMillis;
       Serial.print("Movement = ");
       Serial.println(pirValue);
     } 
-  }
-  if (!pirValue){
-    prevMotionMillis = 0;  
-  }
-
-  //keyboard handling
-  char key = keypad.getKey();
-  if (key){
-    Serial.print("Key pressed = ");
-    Serial.println(key);
-  }
-
-  //screen handling
-  if(curMillis - prevScreenMillis >= tempDelay){
-    prevScreenMillis = curMillis;
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("Humidity = ");
-    lcd.print(DHT.temperature);
-    lcd.setCursor(0,1);
-    lcd.print("Temp = ");
-    lcd.print(DHT.humidity);
-  }
+ // }
+  //if (!pirValue){
+  //  prevMotionMillis = 0;  
+  //}
 }
