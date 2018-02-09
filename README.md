@@ -1,5 +1,5 @@
-# SmartHeating
-This repository holds code for the smart heating project we created during winter quarter 2018 at the University of Washington as part of the Global Innovation Exchange course.
+# IntelligentHeating
+This repository holds code for the smart heating sensor unit we created during winter quarter 2018 at the University of Washington as part of Global Innovation Exchange (GIX).
 
 ## Used Libraries 
 - Adafruit DHT-sensor-library (used for the temperature and humidity sensor): https://github.com/adafruit/DHT-sensor-library
