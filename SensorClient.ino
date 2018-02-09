@@ -1,6 +1,5 @@
 #include <Adafruit_Sensor.h>
 #include "DHT.h"
-#include <LiquidCrystal.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
 #include <ArduinoJson.h>
@@ -17,16 +16,18 @@ long prevMotionMillis = 0;
 int prevTouchValueUp = LOW;
 int prevTouchValueDown = LOW;
 //variables for wifi connection
-const char* ssid =  "University of Washington";     // replace with your wifi ssid and wpa2 key
+const char* ssid =  "****";     // replace with your wifi ssid and wpa2 key
 //const char* password =  "****";
 int status = WL_IDLE_STATUS;
-IPAddress server(40,71,19,247); //server address
+IPAddress server(****); //server address
 const int httpPort = 5000;
 HTTPClient http; 
 //json variables
 StaticJsonBuffer<500> JSONBuffer; //setup memory pool for the JSON object tree
 JsonObject& data = JSONBuffer.createObject();
 char JSONmessageBuffer[500];
+//time variables
+time_t t = now();
 
 //DEFINE PINS
 #define DHTPIN 15 // pin for the temp and humidity sensor
@@ -53,6 +54,7 @@ void setup(){
     delay(500);
     Serial.print(".");
   }
+  http.setReuse(true);
   Serial.println("");
   Serial.println("WiFi connected");
 
@@ -60,7 +62,7 @@ void setup(){
   if (!client.connect(server, httpPort)) {  // if you get a connection, report back via serial:
     Serial.println("connection to server failed");
     delay(5000);
-    return; // Make a HTTP request:
+    return; // Make a HTTP request
   }
   Serial.println("connected to server");
 
@@ -73,6 +75,44 @@ void setup(){
 
   //setup for motion sensor
   pinMode(pirPin, INPUT);
+}
+
+
+//MAIN DATA RECORDING
+void recData(){
+  data["temperature"] = dht.readTemperature(true);
+  data["humidity"] = dht.readHumidity();
+  data["movement"] = pirValue;
+  String timev = String(month(t)) + " " + String(day()) + " " + String(weekday()) + " " + String(hour()) + " " + String(minute()); 
+  Serial.println(timev);
+  //JsonArray& timestamps = data.createNestedArray("timestamps");
+  data["timestamps"] = timev;
+  //timestamps.add(day(t));
+  //timestamps.add(weekday(t));
+  //timestamps.add(hour(t));
+  //timestamps.add(minute(t));
+}
+
+//POST DATA TO SERVER
+void clientHandling(){
+  if (WiFi.status() == WL_CONNECTED) {
+    //handle the json format
+    char JSONmessageBuffer[500];
+    data.prettyPrintTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
+    Serial.println(JSONmessageBuffer);
+
+    //handle the http request
+    http.begin("http://40.71.19.247:5000/post/logdata");
+    http.addHeader("Content-Type", "application/json");
+    int httpCode = http.POST(JSONmessageBuffer);
+    String payload = http.getString();
+    Serial.println(httpCode);
+    Serial.println(payload);
+    http.end();
+  }
+  else{
+    Serial.println("WiFi connection error");
+  }  
 }
 
 void loop()
@@ -111,7 +151,7 @@ void loop()
   if(touchValueUp == HIGH){
     if(prevTouchValueUp != HIGH){
       Serial.println("Up");
-      data["user"] = 1;
+      //data["user"] = 1;
       recData();
       clientHandling();  
     }
@@ -124,7 +164,7 @@ void loop()
   if(touchValueDown == HIGH){
     if(prevTouchValueDown != HIGH){
       Serial.println("Down");
-      data["user"] = -1;
+      //data["user"] = -1;
       recData();
       clientHandling();  
     }
@@ -134,39 +174,3 @@ void loop()
     prevTouchValueDown = LOW;
   }
 }    
-
-//MAIN DATA RECORDING
-void recData(){
-  data["temperature"] = dht.readTemperature(true);
-  data["humidity"] = dht.readHumidity();
-  data["movement"] = pirValue;
-  JsonArray& timestamps = data.createNestedArray("timestamps");
-  timestamps.add(month());
-  timestamps.add(day());
-  timestamps.add(weekday());
-  timestamps.add(hour());
-  timestamps.add(minute());
-}
-
-//POST DATA TO SERVER
-void clientHandling(){
-  if (WiFi.status() == WL_CONNECTED) {
-    //handle the json format
-    char JSONmessageBuffer[500];
-    data.prettyPrintTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-    Serial.println(JSONmessageBuffer);
-
-    //handle the http request
-    http.begin("http://40.71.19.247:5000/post/logdata");
-    http.addHeader("Content-Type", "application/json");
-    int httpCode = http.POST(JSONmessageBuffer);
-    String payload = http.getString();
-    Serial.println(httpCode);
-    Serial.println(payload);
-    http.end();
-  }
-  else{
-    Serial.println("WiFi connection error");
-  }  
-}
-
